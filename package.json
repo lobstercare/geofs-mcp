@@ -20,6 +20,10 @@
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.11.0",
+    "@types/axios": "^0.14.4",
+    "@types/cors": "^2.8.17",
+    "axios": "^1.8.4",
+    "cors": "^2.8.5",
     "express": "^4.18.2",
     "ws": "^8.13.0"
   },
