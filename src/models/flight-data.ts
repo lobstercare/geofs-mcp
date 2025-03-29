@@ -34,6 +34,16 @@ export interface ControlsData {
   ailerons: number;  // Aileron position (-1 to 1)
   rudder: number;    // Rudder position (-1 to 1)
   flaps: number;     // Flaps position (0-1)
+  gear: number;      // Landing gear position (0-1)
+}
+
+/**
+ * Interface for aircraft information
+ */
+export interface AircraftData {
+  id: number;        // Aircraft ID in GeoFS
+  name: string;      // Aircraft name/model
+  type: string;      // Aircraft type (e.g., "airliner", "general")
 }
 
 /**
@@ -44,6 +54,7 @@ export interface FlightData {
   attitude: AttitudeData;
   position: PositionData;
   controls: ControlsData;
+  aircraft?: AircraftData;  // Aircraft information
 }
 
 /**
