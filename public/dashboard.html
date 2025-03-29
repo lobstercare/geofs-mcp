@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoFS MCP Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .full-width {
+            grid-column: 1 / span 2;
+        }
+        h1, h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .map-container {
+            height: 400px;
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .slider-container {
+            margin: 15px 0;
+        }
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data-table th, .data-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .data-table th {
+            background-color: #f2f2f2;
+        }
+        .status {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        .aircraft-selector {
+            margin-bottom: 15px;
+        }
+        .aircraft-selector select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel full-width">
+            <h1>GeoFS MCP Dashboard</h1>
+            <div class="status" id="connection-status">Connecting to server...</div>
+        </div>
+        
+        <div class="panel">
+            <h2>Flight Controls</h2>
+            <div class="aircraft-selector">
+                <label for="aircraft-select">Aircraft Type:</label>
+                <select id="aircraft-select">
+                    <option value="1">Cessna 172</option>
+                    <option value="18">Boeing 737-800</option>
+                    <option value="3">Airbus A320</option>
+                    <option value="7">F-16 Fighting Falcon</option>
+                </select>
+                <button id="select-aircraft-btn">Select Aircraft</button>
+            </div>
+            
+            <div class="slider-container">
+                <label for="throttle-slider">Throttle: <span id="throttle-value">0%</span></label>
+                <input type="range" id="throttle-slider" min="0" max="100" value="0">
+            </div>
+            
+            <div class="slider-container">
+                <label for="heading-slider">Heading: <span id="heading-value">0°</span></label>
+                <input type="range" id="heading-slider" min="0" max="359" value="0">
+            </div>
+            
+            <div class="controls">
+                <button id="takeoff-btn">Take Off</button>
+                <button id="land-btn">Land</button>
+                <button id="turn-left-btn">Turn Left 45°</button>
+                <button id="turn-right-btn">Turn Right 45°</button>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Flight Data</h2>
+            <table class="data-table">
+                <tr>
+                    <th>Parameter</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>Latitude</td>
+                    <td id="latitude">-</td>
+                </tr>
+                <tr>
+                    <td>Longitude</td>
+                    <td id="longitude">-</td>
+                </tr>
+                <tr>
+                    <td>Altitude</td>
+                    <td id="altitude">-</td>
+                </tr>
+                <tr>
+                    <td>Heading</td>
+                    <td id="heading">-</td>
+                </tr>
+                <tr>
+                    <td>Airspeed</td>
+                    <td id="airspeed">-</td>
+                </tr>
+                <tr>
+                    <td>Vertical Speed</td>
+                    <td id="vertical-speed">-</td>
+                </tr>
+                <tr>
+                    <td>Pitch</td>
+                    <td id="pitch">-</td>
+                </tr>
+                <tr>
+                    <td>Roll</td>
+                    <td id="roll">-</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="panel full-width">
+            <h2>Aircraft Location</h2>
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection
+        let socket;
+        let messageId = 1;
+        let currentHeading = 0;
+        let currentThrottle = 0;
+        let map;
+        let marker;
+        
+        // Connect to the WebSocket server
+        function connectWebSocket() {
+            socket = new WebSocket('ws://localhost:3000');
+            
+            socket.onopen = function() {
+                document.getElementById('connection-status').textContent = 'Connected to GeoFS MCP Server';
+                document.getElementById('connection-status').style.backgroundColor = '#d4edda';
+                
+                // Start polling for flight data
+                setInterval(getFlightData, 1000);
+            };
+            
+            socket.onmessage = function(event) {
+                const message = JSON.parse(event.data);
+                console.log('Received message:', message);
+                
+                // Update UI based on message type
+                if (message.result && message.id) {
+                    // Handle specific command responses
+                    if (message.result.latitude !== undefined) {
+                        updatePositionDisplay(message.result);
+                    } else if (message.result.speed !== undefined) {
+                        updateFlightDataDisplay(message.result);
+                    }
+                }
+            };
+            
+            socket.onclose = function() {
+                document.getElementById('connection-status').textContent = 'Disconnected from server';
+                document.getElementById('connection-status').style.backgroundColor = '#f8d7da';
+                
+                // Try to reconnect after 5 seconds
+                setTimeout(connectWebSocket, 5000);
+            };
+            
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                document.getElementById('connection-status').textContent = 'Error connecting to server';
+                document.getElementById('connection-status').style.backgroundColor = '#f8d7da';
+            };
+        }
+        
+        // Send a command to the server
+        function sendCommand(action, params = {}) {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const command = {
+                    id: messageId++,
+                    action: action,
+                    params: params
+                };
+                
+                console.log('Sending command:', command);
+                socket.send(JSON.stringify(command));
+            } else {
+                console.error('WebSocket is not connected');
+            }
+        }
+        
+        // Get current flight data
+        function getFlightData() {
+            sendCommand('getFlightData');
+        }
+        
+        // Update the position display
+        function updatePositionDisplay(position) {
+            document.getElementById('latitude').textContent = position.latitude.toFixed(6) + '°';
+            document.getElementById('longitude').textContent = position.longitude.toFixed(6) + '°';
+            document.getElementById('altitude').textContent = position.altitude.toFixed(1) + ' m';
+            
+            // Update map marker if map is initialized
+            if (map && marker) {
+                marker.setPosition({lat: position.latitude, lng: position.longitude});
+                map.setCenter({lat: position.latitude, lng: position.longitude});
+            }
+        }
+        
+        // Update the flight data display
+        function updateFlightDataDisplay(data) {
+            if (data.speed) {
+                document.getElementById('airspeed').textContent = data.speed.kias.toFixed(1) + ' kts';
+                document.getElementById('vertical-speed').textContent = data.speed.verticalSpeed.toFixed(0) + ' fpm';
+            }
+            
+            if (data.attitude) {
+                document.getElementById('heading').textContent = data.attitude.heading.toFixed(1) + '°';
+                document.getElementById('pitch').textContent = data.attitude.pitch.toFixed(1) + '°';
+                document.getElementById('roll').textContent = data.attitude.roll.toFixed(1) + '°';
+                
+                // Update heading slider without triggering events
+                const headingSlider = document.getElementById('heading-slider');
+                headingSlider.value = data.attitude.heading;
+                document.getElementById('heading-value').textContent = data.attitude.heading.toFixed(0) + '°';
+                currentHeading = data.attitude.heading;
+            }
+            
+            if (data.position) {
+                updatePositionDisplay(data.position);
+            }
+            
+            if (data.controls) {
+                // Update throttle slider without triggering events
+                const throttleSlider = document.getElementById('throttle-slider');
+                throttleSlider.value = data.controls.throttle * 100;
+                document.getElementById('throttle-value').textContent = (data.controls.throttle * 100).toFixed(0) + '%';
+                currentThrottle = data.controls.throttle;
+            }
+        }
+        
+        // Initialize Google Maps
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: {lat: 37.6213, lng: -122.3790},
+                zoom: 12,
+                mapTypeId: 'satellite'
+            });
+            
+            marker = new google.maps.Marker({
+                position: {lat: 37.6213, lng: -122.3790},
+                map: map,
+                title: 'Aircraft Position',
+                icon: {
+                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                    scale: 6,
+                    rotation: currentHeading
+                }
+            });
+        }
+        
+        // Set up event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Connect to WebSocket
+            connectWebSocket();
+            
+            // Throttle slider
+            const throttleSlider = document.getElementById('throttle-slider');
+            throttleSlider.addEventListener('input', function() {
+                const value = this.value / 100;
+                document.getElementById('throttle-value').textContent = this.value + '%';
+                sendCommand('setThrottle', {value: value});
+            });
+            
+            // Heading slider
+            const headingSlider = document.getElementById('heading-slider');
+            headingSlider.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                document.getElementById('heading-value').textContent = value + '°';
+            });
+            
+            headingSlider.addEventListener('change', function() {
+                const value = parseInt(this.value);
+                sendCommand('setHeading', {degrees: value});
+            });
+            
+            // Aircraft selection
+            document.getElementById('select-aircraft-btn').addEventListener('click', function() {
+                const aircraftId = parseInt(document.getElementById('aircraft-select').value);
+                sendCommand('selectAircraft', {aircraftId: aircraftId});
+            });
+            
+            // Take off button
+            document.getElementById('takeoff-btn').addEventListener('click', function() {
+                sendCommand('takeOff');
+            });
+            
+            // Land button
+            document.getElementById('land-btn').addEventListener('click', function() {
+                sendCommand('land');
+            });
+            
+            // Turn left button
+            document.getElementById('turn-left-btn').addEventListener('click', function() {
+                const newHeading = (currentHeading - 45 + 360) % 360;
+                sendCommand('setHeading', {degrees: newHeading});
+            });
+            
+            // Turn right button
+            document.getElementById('turn-right-btn').addEventListener('click', function() {
+                const newHeading = (currentHeading + 45) % 360;
+                sendCommand('setHeading', {degrees: newHeading});
+            });
+        });
+    </script>
+    
+    <!-- Google Maps API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap" async defer></script>
+</body>
+</html>
