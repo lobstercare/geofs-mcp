@@ -12,9 +12,10 @@ const port = 3002;
 
 // Enable CORS for all routes
 app.use(cors({
-  origin: '*', // Allow all origins
+  origin: ['https://www.geo-fs.com', 'https://geo-fs.com', 'http://localhost:3002'],
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 // Parse JSON request bodies

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoFS MCP Server</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #2980b9;
+            margin-top: 30px;
+        }
+        .bookmarklet {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .bookmarklet:hover {
+            background-color: #2980b9;
+        }
+        .instructions {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        code {
+            background-color: #f1f1f1;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>GeoFS Model Context Protocol (MCP) Server</h1>
+    
+    <p>This server provides an interface for controlling aircraft in the GeoFS flight simulator using natural language commands through GPT-4o.</p>
+    
+    <div class="instructions">
+        <h2>How to Connect to GeoFS</h2>
+        <p>To connect the MCP server to GeoFS, you have two options:</p>
+        
+        <h3>Option 1: Use the Bookmarklet (Recommended)</h3>
+        <p>Drag this link to your bookmarks bar:</p>
+        <a href="javascript:(function(){const script=document.createElement('script');fetch('http://localhost:3002/direct-control.js').then(response=>response.text()).then(scriptContent=>{const blob=new Blob([scriptContent],{type:'application/javascript'});const url=URL.createObjectURL(blob);script.src=url;document.head.appendChild(script);console.log('GeoFS MCP Control Panel loaded successfully!');}).catch(error=>{console.error('Failed to load GeoFS MCP Control Panel:',error);alert('Failed to load GeoFS MCP Control Panel. Check the console for details.');});})()" class="bookmarklet">GeoFS MCP Control</a>
+        
+        <p>Then:</p>
+        <ol>
+            <li>Open <a href="https://www.geo-fs.com" target="_blank">GeoFS</a> in your browser</li>
+            <li>Select the Boeing 787-9 Vistara aircraft</li>
+            <li>Once GeoFS is fully loaded, click the bookmarklet in your bookmarks bar</li>
+            <li>The MCP control panel should appear in the GeoFS interface</li>
+        </ol>
+        
+        <h3>Option 2: Use the Console</h3>
+        <p>If the bookmarklet doesn't work, you can paste this code in your browser console (F12):</p>
+        <pre><code>
+(function(){
+  const script = document.createElement('script');
+  fetch('http://localhost:3002/direct-control.js')
+    .then(response => response.text())
+    .then(scriptContent => {
+      const blob = new Blob([scriptContent], { type: 'application/javascript' });
+      const url = URL.createObjectURL(blob);
+      script.src = url;
+      document.head.appendChild(script);
+      console.log('GeoFS MCP Control Panel loaded successfully!');
+    })
+    .catch(error => {
+      console.error('Failed to load GeoFS MCP Control Panel:', error);
+      alert('Failed to load GeoFS MCP Control Panel. Check the console for details.');
+    });
+})();
+        </code></pre>
+    </div>
+    
+    <h2>Using GPT-4o to Control Your Aircraft</h2>
+    <p>Once the control panel is loaded in GeoFS:</p>
+    <ol>
+        <li>Click on the "GPT Control" tab in the control panel</li>
+        <li>Enter a natural language command in the text area (e.g., "Take off from runway 3 at Luxembourg airport")</li>
+        <li>Click "Send to GPT" to execute the command</li>
+        <li>The GPT response will appear below, and the aircraft will begin executing the commands</li>
+    </ol>
+    
+    <h3>Example Commands</h3>
+    <ul>
+        <li>"Take off from the current runway with flaps at 30%"</li>
+        <li>"Turn right to heading 180 degrees"</li>
+        <li>"Begin approach to the nearest runway"</li>
+        <li>"Execute a holding pattern at current altitude"</li>
+        <li>"Land at the current airport"</li>
+    </ul>
+    
+    <div class="warning">
+        <h3>Important Notes</h3>
+        <p>For full OpenAI GPT-4o integration, you'll need to add your OpenAI API key in the settings section of the GPT Control tab. Without an API key, the system will use simulated responses for common flight commands.</p>
+        <p>Make sure the MCP server is running on port 3002 before attempting to connect.</p>
+    </div>
+    
+    <h2>Server Status</h2>
+    <p>The server is currently running on <a href="http://localhost:3002">http://localhost:3002</a>.</p>
+    <p>API endpoints:</p>
+    <ul>
+        <li><code>/api/status</code> - Get server status</li>
+        <li><code>/gpt-command</code> - Send commands to GPT-4o</li>
+    </ul>
+    
+    <footer style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; color: #777;">
+        <p>GeoFS MCP Server - Powered by Model Context Protocol</p>
+    </footer>
+
+    <script>
+        // Check if server is running
+        fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Server status:', data);
+            })
+            .catch(error => {
+                console.error('Error checking server status:', error);
+            });
+    </script>
+</body>
+</html>
