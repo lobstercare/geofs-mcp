@@ -1,75 +1,193 @@
 import express from 'express';
-import { Server } from 'http';
+import http from 'http';
 import WebSocket from 'ws';
 import path from 'path';
+import cors from 'cors';
 import { GeoFSController } from './controllers/geofs-controller';
-import { setupMCPRoutes } from './routes/mcp-routes';
+import { GPTController } from './ai/gpt-controller';
 
-// Create Express app
+// Initialize Express app
 const app = express();
-const port = process.env.PORT || 3002;
+const port = 3002;
+
+// Enable CORS for all routes
+app.use(cors({
+  origin: '*', // Allow all origins
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Parse JSON request bodies
+app.use(express.json());
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Initialize controllers
+const geofsController = new GeoFSController();
+let gptController: GPTController | null = null;
+
+// API routes
+app.get('/api/status', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'GeoFS MCP Server is running',
+    controller: {
+      initialized: geofsController.isInitialized()
+    }
+  });
+});
+
+// Route for GPT commands
+app.post('/gpt-command', async (req, res) => {
+  try {
+    const { command } = req.body;
+    
+    if (!command) {
+      return res.status(400).json({ error: 'Command is required' });
+    }
+    
+    if (!gptController) {
+      // Use a default API key or empty string for simulated responses
+      const apiKey = process.env.OPENAI_API_KEY || '';
+      gptController = new GPTController(apiKey);
+    }
+    
+    const response = await gptController.processNaturalLanguageCommand(command);
+    
+    res.json({ response });
+  } catch (error) {
+    console.error('Error processing GPT command:', error);
+    res.status(500).json({ error: 'Failed to process command' });
+  }
+});
+
+// Route for setting API key
+app.post('/set-api-key', (req, res) => {
+  try {
+    const { apiKey } = req.body;
+    
+    if (!apiKey) {
+      return res.status(400).json({ error: 'API key is required' });
+    }
+    
+    // Initialize or reinitialize GPT controller with the new API key
+    if (gptController) {
+      gptController.close();
+    }
+    
+    gptController = new GPTController(apiKey);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error setting API key:', error);
+    res.status(500).json({ error: 'Failed to set API key' });
+  }
+});
 
 // Create HTTP server
-const server = new Server(app);
+const server = http.createServer(app);
 
 // Create WebSocket server
 const wss = new WebSocket.Server({ server });
 
-// Initialize GeoFS controller
-const geofsController = new GeoFSController();
-
-// Middleware
-app.use(express.json());
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Add CORS headers to allow requests from GeoFS
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  next();
-});
-
-// Setup MCP routes
-setupMCPRoutes(app, geofsController);
-
-// Basic health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'GeoFS MCP Server is running' });
-});
-
-// WebSocket connection handling
+// WebSocket connection handler
 wss.on('connection', (ws) => {
-  console.log('Client connected to WebSocket');
+  console.log('Client connected');
   
-  ws.on('message', async (message) => {
+  // Send welcome message
+  ws.send(JSON.stringify({
+    type: 'info',
+    message: 'Connected to GeoFS MCP Server'
+  }));
+  
+  // Handle messages from clients
+  ws.on('message', (message) => {
     try {
       const data = JSON.parse(message.toString());
       console.log('Received message:', data);
       
       // Handle different message types
       if (data.type === 'command') {
-        const result = await geofsController.executeCommand(data.command, data.params);
-        ws.send(JSON.stringify({ id: data.id, result }));
+        handleCommand(data, ws);
       }
     } catch (error) {
       console.error('Error processing message:', error);
-      ws.send(JSON.stringify({ error: 'Failed to process message' }));
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Error processing message'
+      }));
     }
   });
   
+  // Handle client disconnection
   ws.on('close', () => {
-    console.log('Client disconnected from WebSocket');
+    console.log('Client disconnected');
   });
 });
 
+// Handle commands from clients
+function handleCommand(data: any, ws: WebSocket) {
+  const { id, command, params } = data;
+  
+  try {
+    switch (command) {
+      case 'getFlightData':
+        const flightData = geofsController.getFlightData();
+        ws.send(JSON.stringify({
+          id,
+          type: 'flightData',
+          data: flightData
+        }));
+        break;
+        
+      case 'setThrottle':
+        geofsController.setThrottle(params.value);
+        ws.send(JSON.stringify({
+          id,
+          type: 'success',
+          message: `Throttle set to ${params.value}`
+        }));
+        break;
+        
+      case 'setHeading':
+        geofsController.setHeading(params.degrees);
+        ws.send(JSON.stringify({
+          id,
+          type: 'success',
+          message: `Heading set to ${params.degrees} degrees`
+        }));
+        break;
+        
+      case 'startPattern':
+        geofsController.startPattern(params.pattern);
+        ws.send(JSON.stringify({
+          id,
+          type: 'success',
+          message: `Started pattern: ${params.pattern}`
+        }));
+        break;
+        
+      // Add more commands as needed
+        
+      default:
+        ws.send(JSON.stringify({
+          id,
+          type: 'error',
+          message: `Unknown command: ${command}`
+        }));
+    }
+  } catch (error) {
+    console.error(`Error executing command ${command}:`, error);
+    ws.send(JSON.stringify({
+      id,
+      type: 'error',
+      message: `Error executing command: ${error}`
+    }));
+  }
+}
+
 // Start the server
 server.listen(port, () => {
-  console.log(`GeoFS MCP Server is running on port ${port}`);
-  console.log(`Health check available at http://localhost:${port}/health`);
-  console.log(`Dashboard available at http://localhost:${port}/dashboard.html`);
-  
-  // Initialize GeoFS browser controller
-  geofsController.initialize()
-    .then(() => console.log('GeoFS controller initialized'))
-    .catch((error) => console.error('Failed to initialize GeoFS controller:', error));
+  console.log(`GeoFS MCP Server running at http://localhost:${port}`);
 });
