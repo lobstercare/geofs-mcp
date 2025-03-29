@@ -10,7 +10,8 @@
 import { FlightData, PositionData } from '../models/flight-data';
 
 export class GeoFSController {
-  private isInitialized = false;
+  // Flag to track initialization status
+  private _isInitialized = false;
   
   // Aircraft state
   private aircraft = {
@@ -41,7 +42,8 @@ export class GeoFSController {
       elevators: 0,
       ailerons: 0,
       rudder: 0,
-      flaps: 0
+      flaps: 0,
+      gear: 1 // Default to gear down
     },
     
     // Aircraft type (default: Cessna 172)
@@ -64,7 +66,7 @@ export class GeoFSController {
       // Start the physics simulation
       this.startPhysicsSimulation();
       
-      this.isInitialized = true;
+      this._isInitialized = true;
       console.log('GeoFS simulation started successfully');
     } catch (error) {
       console.error('Failed to initialize GeoFS controller:', error);
@@ -123,10 +125,271 @@ export class GeoFSController {
   }
   
   /**
+   * Check if the controller is initialized
+   */
+  public isInitialized(): boolean {
+    return this._isInitialized;
+  }
+
+  /**
+   * Get current flight data
+   */
+  public getFlightData(): FlightData {
+    return {
+      position: { ...this.aircraft.position },
+      attitude: { ...this.aircraft.attitude },
+      speed: { ...this.aircraft.speed },
+      controls: { ...this.aircraft.controls },
+      aircraft: {
+        id: this.aircraft.aircraftId,
+        name: this.getAircraftName(this.aircraft.aircraftId),
+        type: this.getAircraftType(this.aircraft.aircraftId)
+      }
+    };
+  }
+
+  /**
+   * Set throttle value
+   */
+  public setThrottle(value: number): void {
+    // Ensure value is between 0 and 1
+    const throttle = Math.max(0, Math.min(1, value));
+    
+    // Update all engines
+    this.aircraft.engines.forEach(engine => {
+      engine.throttle = throttle;
+      engine.running = throttle > 0;
+    });
+    
+    this.aircraft.controls.throttle = throttle;
+    
+    console.log(`Throttle set to ${throttle}`);
+  }
+
+  /**
+   * Set target heading
+   */
+  public setHeading(degrees: number): void {
+    // Normalize heading to 0-360 range
+    let heading = degrees % 360;
+    if (heading < 0) heading += 360;
+    
+    // Set target heading
+    const targetHeading = heading;
+    
+    // Simulate turning to the target heading
+    this.turnToHeading(targetHeading);
+    
+    console.log(`Heading set to ${targetHeading} degrees`);
+  }
+
+  /**
+   * Start a predefined flight pattern
+   */
+  public startPattern(pattern: string): void {
+    console.log(`Starting pattern: ${pattern}`);
+    
+    switch (pattern.toLowerCase()) {
+      case 'takeoff':
+        this.executeTakeoffPattern();
+        break;
+      case 'landing':
+        this.executeLandingPattern();
+        break;
+      case 'approach':
+        this.executeApproachPattern();
+        break;
+      case 'holdingpattern':
+        this.executeHoldingPattern();
+        break;
+      default:
+        console.error(`Unknown pattern: ${pattern}`);
+    }
+  }
+
+  /**
+   * Execute takeoff pattern
+   */
+  private executeTakeoffPattern(): void {
+    // Set flaps for takeoff
+    this.aircraft.controls.flaps = 0.3;
+    
+    // Ensure gear is down
+    this.aircraft.controls.gear = 1;
+    
+    // Apply full throttle
+    this.setThrottle(1.0);
+    
+    // Simulate rotation at appropriate speed
+    setTimeout(() => {
+      // Pitch up for takeoff
+      this.aircraft.attitude.pitch = 10;
+      
+      // Simulate positive climb
+      setTimeout(() => {
+        // Retract gear
+        this.aircraft.controls.gear = 0;
+        
+        // Climb to 1000 feet
+        this.aircraft.position.altitude += 300;
+        
+        // Reduce flaps
+        setTimeout(() => {
+          this.aircraft.controls.flaps = 0;
+        }, 5000);
+      }, 3000);
+    }, 5000);
+  }
+
+  /**
+   * Execute landing pattern
+   */
+  private executeLandingPattern(): void {
+    // Reduce speed
+    this.setThrottle(0.3);
+    
+    // Set flaps for approach
+    this.aircraft.controls.flaps = 0.5;
+    
+    // Lower landing gear
+    this.aircraft.controls.gear = 1;
+    
+    // Set approach pitch (3-degree glideslope)
+    this.aircraft.attitude.pitch = -3;
+    
+    // Simulate touchdown
+    setTimeout(() => {
+      // Flare before touchdown
+      this.aircraft.attitude.pitch = 0;
+      
+      // Touch down
+      setTimeout(() => {
+        // Reduce throttle to idle
+        this.setThrottle(0);
+      }, 3000);
+    }, 10000);
+  }
+
+  /**
+   * Execute approach pattern
+   */
+  private executeApproachPattern(): void {
+    // Configure for approach
+    this.setThrottle(0.4);
+    this.aircraft.controls.flaps = 0.3;
+    
+    // Align with runway
+    // (This would use the current airport data in a real implementation)
+    
+    // Descend to pattern altitude
+    this.aircraft.position.altitude = 1000;
+  }
+
+  /**
+   * Execute holding pattern
+   */
+  private executeHoldingPattern(): void {
+    // Set up for holding pattern
+    this.setThrottle(0.5);
+    this.aircraft.controls.flaps = 0;
+    
+    // Execute a series of turns to create a racetrack pattern
+    this.turnToHeading(this.aircraft.attitude.heading);
+    
+    // After 2 minutes, turn 90 degrees right
+    setTimeout(() => {
+      this.turnToHeading((this.aircraft.attitude.heading + 90) % 360);
+      
+      // After 1 minute, turn 90 degrees right again
+      setTimeout(() => {
+        this.turnToHeading((this.aircraft.attitude.heading + 90) % 360);
+        
+        // After 2 minutes, turn 90 degrees right again
+        setTimeout(() => {
+          this.turnToHeading((this.aircraft.attitude.heading + 90) % 360);
+        }, 120000);
+      }, 60000);
+    }, 120000);
+  }
+
+  /**
+   * Turn to a specific heading
+   */
+  private turnToHeading(targetHeading: number): void {
+    // Calculate turn direction (shortest path)
+    const currentHeading = this.aircraft.attitude.heading;
+    let headingDiff = targetHeading - currentHeading;
+    
+    // Normalize to -180 to 180 range
+    if (headingDiff > 180) headingDiff -= 360;
+    if (headingDiff < -180) headingDiff += 360;
+    
+    // Determine bank direction
+    const bankDirection = headingDiff > 0 ? 1 : -1;
+    
+    // Apply bank
+    this.aircraft.attitude.roll = bankDirection * 20;
+    
+    // Simulate turn
+    const turnRate = 3; // degrees per second
+    const turnTime = Math.abs(headingDiff) / turnRate;
+    
+    // Gradually update heading
+    const startTime = Date.now();
+    const startHeading = currentHeading;
+    
+    const updateHeading = () => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      const progress = Math.min(1, elapsed / turnTime);
+      
+      this.aircraft.attitude.heading = startHeading + headingDiff * progress;
+      
+      // Normalize heading
+      this.aircraft.attitude.heading = (this.aircraft.attitude.heading + 360) % 360;
+      
+      if (progress < 1) {
+        setTimeout(updateHeading, 100);
+      } else {
+        // Level off
+        this.aircraft.attitude.roll = 0;
+      }
+    };
+    
+    updateHeading();
+  }
+
+  /**
+   * Get aircraft name based on ID
+   */
+  private getAircraftName(id: number): string {
+    const aircraftNames: { [key: number]: string } = {
+      1: 'Cessna 172',
+      18: 'Boeing 737-800',
+      24: 'Boeing 787-9',
+      25: 'Boeing 787-10'
+    };
+    
+    return aircraftNames[id] || 'Unknown Aircraft';
+  }
+
+  /**
+   * Get aircraft type based on ID
+   */
+  private getAircraftType(id: number): string {
+    if (id >= 18 && id <= 25) {
+      return 'airliner';
+    } else if (id >= 1 && id <= 10) {
+      return 'general';
+    } else {
+      return 'unknown';
+    }
+  }
+
+  /**
    * Execute a command in the simulated GeoFS
    */
-  async executeCommand(command: string, params: any): Promise<any> {
-    if (!this.isInitialized) {
+  public async executeCommand(command: string, params: any): Promise<any> {
+    if (!this._isInitialized) {
       throw new Error('GeoFS controller not initialized');
     }
 
@@ -148,6 +411,8 @@ export class GeoFSController {
           return this.getFlightData();
         case 'updateAircraftState':
           return this.updateAircraftState(params);
+        case 'startPattern':
+          return this.startPattern(params.pattern);
         default:
           throw new Error(`Unknown command: ${command}`);
       }
@@ -204,39 +469,6 @@ export class GeoFSController {
   }
 
   /**
-   * Set the throttle value (0-1)
-   */
-  private setThrottle(value: number): boolean {
-    // Ensure value is between 0 and 1
-    const throttleValue = Math.max(0, Math.min(1, value));
-    
-    // Set throttle on all engines
-    this.aircraft.engines.forEach(engine => {
-      engine.throttle = throttleValue;
-    });
-    
-    // Update control value
-    this.aircraft.controls.throttle = throttleValue;
-    
-    console.log(`Throttle set to ${throttleValue * 100}%`);
-    return true;
-  }
-
-  /**
-   * Set the aircraft heading
-   */
-  private setHeading(degrees: number): boolean {
-    // Normalize degrees to 0-360
-    const normalizedDegrees = ((degrees % 360) + 360) % 360;
-    
-    // Set new heading
-    this.aircraft.attitude.heading = normalizedDegrees;
-    
-    console.log(`Heading set to ${normalizedDegrees}°`);
-    return true;
-  }
-
-  /**
    * Get the current aircraft position
    */
   private getPosition(): PositionData {
@@ -288,18 +520,6 @@ export class GeoFSController {
   }
 
   /**
-   * Get current flight data
-   */
-  private getFlightData(): FlightData {
-    return {
-      speed: { ...this.aircraft.speed },
-      attitude: { ...this.aircraft.attitude },
-      position: { ...this.aircraft.position },
-      controls: { ...this.aircraft.controls }
-    };
-  }
-
-  /**
    * Clean up resources
    */
   async close(): Promise<void> {
@@ -308,7 +528,7 @@ export class GeoFSController {
       this.updateInterval = null;
     }
     
-    this.isInitialized = false;
+    this._isInitialized = false;
     console.log('GeoFS simulation stopped');
   }
 }
