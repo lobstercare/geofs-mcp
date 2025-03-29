@@ -1,6 +1,7 @@
 # GeoFS MCP Server
 
 A Model Context Protocol (MCP) server for the GeoFS flight simulator, allowing AI models to control and interact with aircraft in the GeoFS browser-based flight simulator.
+![image](https://github.com/user-attachments/assets/9b9f8c68-10c1-43b5-b040-f9b7740c04cd)
 
 ## Features
 
