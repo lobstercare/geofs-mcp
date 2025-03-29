@@ -146,12 +146,60 @@ export class GeoFSController {
           return this.land();
         case 'getFlightData':
           return this.getFlightData();
+        case 'updateAircraftState':
+          return this.updateAircraftState(params);
         default:
           throw new Error(`Unknown command: ${command}`);
       }
     } catch (error) {
       console.error(`Error executing command ${command}:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Update aircraft state directly from external data
+   * Used for replaying flight data
+   */
+  private updateAircraftState(params: any): boolean {
+    try {
+      // Update position if provided
+      if (params.position) {
+        this.aircraft.position = {
+          ...this.aircraft.position,
+          ...params.position
+        };
+      }
+      
+      // Update attitude if provided
+      if (params.attitude) {
+        this.aircraft.attitude = {
+          ...this.aircraft.attitude,
+          ...params.attitude
+        };
+      }
+      
+      // Update speed if provided
+      if (params.speed) {
+        this.aircraft.speed = {
+          ...this.aircraft.speed,
+          ...params.speed
+        };
+      }
+      
+      // Update controls if provided
+      if (params.controls) {
+        this.aircraft.controls = {
+          ...this.aircraft.controls,
+          ...params.controls
+        };
+      }
+      
+      console.log('Aircraft state updated from external data');
+      return true;
+    } catch (error) {
+      console.error('Error updating aircraft state:', error);
+      return false;
     }
   }
 

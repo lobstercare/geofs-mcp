@@ -49,54 +49,119 @@
             gap: 10px;
         }
         button {
+            padding: 10px;
             background-color: #3498db;
             color: white;
             border: none;
-            padding: 10px 15px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
-            transition: background-color 0.2s;
+            transition: background-color 0.3s;
         }
         button:hover {
             background-color: #2980b9;
         }
-        .slider-container {
-            margin: 15px 0;
-        }
-        .slider-container label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        input[type="range"] {
-            width: 100%;
-        }
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .data-table th, .data-table td {
-            padding: 8px 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        .data-table th {
-            background-color: #f2f2f2;
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
         }
         .status {
             padding: 10px;
-            margin-top: 10px;
-            border-radius: 4px;
-            background-color: #f8f9fa;
-        }
-        .aircraft-selector {
             margin-bottom: 15px;
+            border-radius: 4px;
+            font-weight: bold;
         }
-        .aircraft-selector select {
+        .connected {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .disconnected {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .connecting {
+            background-color: #f39c12;
+            color: white;
+        }
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .data-item {
+            margin-bottom: 5px;
+        }
+        .data-label {
+            font-weight: bold;
+        }
+        .code-block {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            border-bottom: 2px solid #3498db;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .flight-pattern-select {
+            width: 100%;
             padding: 8px;
+            margin-bottom: 10px;
             border-radius: 4px;
             border: 1px solid #ddd;
-            width: 100%;
+        }
+        .log-container {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #34495e;
+            padding-bottom: 5px;
+        }
+        .log-time {
+            color: #95a5a6;
+            margin-right: 10px;
+        }
+        .log-info {
+            color: #3498db;
+        }
+        .log-error {
+            color: #e74c3c;
+        }
+        .log-success {
+            color: #2ecc71;
+        }
+        .log-warning {
+            color: #f39c12;
         }
     </style>
 </head>
@@ -106,136 +171,147 @@
             <h1>GeoFS MCP Dashboard</h1>
             <div class="status" id="connection-status">Connecting to server...</div>
         </div>
-        
-        <div class="panel">
-            <h2>Flight Controls</h2>
-            <div class="aircraft-selector">
-                <label for="aircraft-select">Aircraft Type:</label>
-                <select id="aircraft-select">
-                    <option value="1">Cessna 172</option>
-                    <option value="18">Boeing 737-800</option>
-                    <option value="3">Airbus A320</option>
-                    <option value="7">F-16 Fighting Falcon</option>
-                </select>
-                <button id="select-aircraft-btn">Select Aircraft</button>
-            </div>
-            
-            <div class="slider-container">
-                <label for="throttle-slider">Throttle: <span id="throttle-value">0%</span></label>
-                <input type="range" id="throttle-slider" min="0" max="100" value="0">
-            </div>
-            
-            <div class="slider-container">
-                <label for="heading-slider">Heading: <span id="heading-value">0°</span></label>
-                <input type="range" id="heading-slider" min="0" max="359" value="0">
-            </div>
-            
-            <div class="controls">
-                <button id="takeoff-btn">Take Off</button>
-                <button id="land-btn">Land</button>
-                <button id="turn-left-btn">Turn Left 45°</button>
-                <button id="turn-right-btn">Turn Right 45°</button>
-            </div>
-        </div>
-        
+
         <div class="panel">
             <h2>Flight Data</h2>
-            <table class="data-table">
-                <tr>
-                    <th>Parameter</th>
-                    <th>Value</th>
-                </tr>
-                <tr>
-                    <td>Latitude</td>
-                    <td id="latitude">-</td>
-                </tr>
-                <tr>
-                    <td>Longitude</td>
-                    <td id="longitude">-</td>
-                </tr>
-                <tr>
-                    <td>Altitude</td>
-                    <td id="altitude">-</td>
-                </tr>
-                <tr>
-                    <td>Heading</td>
-                    <td id="heading">-</td>
-                </tr>
-                <tr>
-                    <td>Airspeed</td>
-                    <td id="airspeed">-</td>
-                </tr>
-                <tr>
-                    <td>Vertical Speed</td>
-                    <td id="vertical-speed">-</td>
-                </tr>
-                <tr>
-                    <td>Pitch</td>
-                    <td id="pitch">-</td>
-                </tr>
-                <tr>
-                    <td>Roll</td>
-                    <td id="roll">-</td>
-                </tr>
-            </table>
-        </div>
-        
-        <div class="panel full-width">
-            <h2>Aircraft Location</h2>
+            <div class="data-grid">
+                <div class="data-item">
+                    <div class="data-label">Latitude:</div>
+                    <div id="latitude">-</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">Longitude:</div>
+                    <div id="longitude">-</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">Altitude:</div>
+                    <div id="altitude">-</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">Heading:</div>
+                    <div id="heading">-</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">Airspeed:</div>
+                    <div id="airspeed">-</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">Vertical Speed:</div>
+                    <div id="vertical-speed">-</div>
+                </div>
+            </div>
             <div class="map-container">
                 <div id="map"></div>
             </div>
         </div>
+
+        <div class="panel">
+            <h2>Controls</h2>
+            <div class="tabs">
+                <div class="tab active" data-tab="basic-controls">Basic Controls</div>
+                <div class="tab" data-tab="flight-patterns">Flight Patterns</div>
+                <div class="tab" data-tab="logs">Logs</div>
+            </div>
+            
+            <!-- Basic Controls Tab -->
+            <div class="tab-content active" id="basic-controls">
+                <div class="controls">
+                    <button id="get-data-btn">Get Flight Data</button>
+                    <button id="set-throttle-btn">Set Throttle (50%)</button>
+                    <button id="set-heading-btn">Set Heading (270°)</button>
+                    <button id="select-b787-btn">Select Boeing 787</button>
+                </div>
+            </div>
+            
+            <!-- Flight Patterns Tab -->
+            <div class="tab-content" id="flight-patterns">
+                <h3>Flight Pattern Control</h3>
+                <select id="pattern-select" class="flight-pattern-select">
+                    <option value="takeoff">Takeoff</option>
+                    <option value="rightTurn">Right Turn</option>
+                    <option value="descent">Descent</option>
+                </select>
+                <div class="controls">
+                    <button id="start-pattern-btn">Start Pattern</button>
+                    <button id="pause-pattern-btn" disabled>Pause</button>
+                    <button id="stop-pattern-btn" disabled>Stop</button>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">Pattern Status:</div>
+                    <div id="pattern-status">Ready</div>
+                </div>
+            </div>
+            
+            <!-- Logs Tab -->
+            <div class="tab-content" id="logs">
+                <div class="log-container" id="log-container">
+                    <!-- Logs will be added here -->
+                </div>
+                <div class="controls" style="margin-top: 10px;">
+                    <button id="clear-logs-btn">Clear Logs</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel full-width">
+            <h2>Raw Data</h2>
+            <div class="code-block" id="raw-data">No data received yet</div>
+        </div>
     </div>
 
     <script>
-        // WebSocket connection
         let socket;
-        let messageId = 1;
-        let currentHeading = 0;
-        let currentThrottle = 0;
         let map;
         let marker;
-        
+        let flightPath;
+        let flightCoordinates = [];
+        let currentPatternInterval = null;
+        let isPaused = false;
+        let currentPatternIndex = 0;
+        let currentPattern = [];
+
         // Connect to the WebSocket server
         function connectWebSocket() {
+            const statusElement = document.getElementById('connection-status');
+            statusElement.className = 'status connecting';
+            statusElement.textContent = 'Connecting to server...';
+            
             socket = new WebSocket('ws://localhost:3000');
             
             socket.onopen = function() {
-                document.getElementById('connection-status').textContent = 'Connected to GeoFS MCP Server';
-                document.getElementById('connection-status').style.backgroundColor = '#d4edda';
+                statusElement.className = 'status connected';
+                statusElement.textContent = 'Connected to server';
+                addLogEntry('Connected to MCP server', 'success');
                 
-                // Start polling for flight data
-                setInterval(getFlightData, 1000);
-            };
-            
-            socket.onmessage = function(event) {
-                const message = JSON.parse(event.data);
-                console.log('Received message:', message);
-                
-                // Update UI based on message type
-                if (message.result && message.id) {
-                    // Handle specific command responses
-                    if (message.result.latitude !== undefined) {
-                        updatePositionDisplay(message.result);
-                    } else if (message.result.speed !== undefined) {
-                        updateFlightDataDisplay(message.result);
-                    }
-                }
+                // Get initial flight data
+                getFlightData();
             };
             
             socket.onclose = function() {
-                document.getElementById('connection-status').textContent = 'Disconnected from server';
-                document.getElementById('connection-status').style.backgroundColor = '#f8d7da';
+                statusElement.className = 'status disconnected';
+                statusElement.textContent = 'Disconnected from server';
+                addLogEntry('Disconnected from MCP server', 'error');
                 
                 // Try to reconnect after 5 seconds
                 setTimeout(connectWebSocket, 5000);
             };
             
             socket.onerror = function(error) {
-                console.error('WebSocket error:', error);
-                document.getElementById('connection-status').textContent = 'Error connecting to server';
-                document.getElementById('connection-status').style.backgroundColor = '#f8d7da';
+                addLogEntry('WebSocket error: ' + error, 'error');
+            };
+            
+            socket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    document.getElementById('raw-data').textContent = JSON.stringify(data, null, 2);
+                    
+                    if (data.type === 'flightData') {
+                        updateFlightDataDisplay(data.data);
+                        addLogEntry('Received flight data', 'info');
+                    }
+                } catch (error) {
+                    addLogEntry('Error parsing message: ' + error, 'error');
+                }
             };
         }
         
@@ -243,144 +319,373 @@
         function sendCommand(action, params = {}) {
             if (socket && socket.readyState === WebSocket.OPEN) {
                 const command = {
-                    id: messageId++,
-                    action: action,
-                    params: params
+                    type: 'command',
+                    command: action,
+                    params: params,
+                    id: Date.now()
                 };
                 
-                console.log('Sending command:', command);
                 socket.send(JSON.stringify(command));
+                addLogEntry(`Sent command: ${action}`, 'info');
+                return true;
             } else {
-                console.error('WebSocket is not connected');
+                addLogEntry('Cannot send command: Not connected to server', 'error');
+                return false;
             }
         }
         
         // Get current flight data
         function getFlightData() {
-            sendCommand('getFlightData');
+            return sendCommand('getFlightData');
+        }
+        
+        // Start a flight pattern
+        function startFlightPattern(patternName) {
+            if (currentPatternInterval) {
+                stopFlightPattern();
+            }
+            
+            currentPattern = flightPatterns[patternName] || [];
+            if (currentPattern.length === 0) {
+                addLogEntry(`Pattern "${patternName}" not found`, 'error');
+                return false;
+            }
+            
+            currentPatternIndex = 0;
+            isPaused = false;
+            
+            // Send first state
+            sendCommand('updateAircraftState', currentPattern[0]);
+            addLogEntry(`Started pattern: ${patternName}`, 'success');
+            
+            // Update UI
+            document.getElementById('pattern-status').textContent = `Running: 1/${currentPattern.length}`;
+            document.getElementById('pause-pattern-btn').disabled = false;
+            document.getElementById('stop-pattern-btn').disabled = false;
+            document.getElementById('start-pattern-btn').disabled = true;
+            document.getElementById('pattern-select').disabled = true;
+            
+            // Set interval for subsequent states
+            currentPatternInterval = setInterval(function() {
+                if (isPaused) return;
+                
+                currentPatternIndex++;
+                
+                if (currentPatternIndex < currentPattern.length) {
+                    sendCommand('updateAircraftState', currentPattern[currentPatternIndex]);
+                    document.getElementById('pattern-status').textContent = 
+                        `Running: ${currentPatternIndex + 1}/${currentPattern.length}`;
+                } else {
+                    // End of pattern
+                    stopFlightPattern();
+                    addLogEntry(`Pattern completed`, 'success');
+                }
+            }, 2000); // 2-second intervals
+            
+            return true;
+        }
+        
+        // Pause/resume flight pattern
+        function togglePauseFlightPattern() {
+            isPaused = !isPaused;
+            
+            const pauseBtn = document.getElementById('pause-pattern-btn');
+            pauseBtn.textContent = isPaused ? 'Resume' : 'Pause';
+            
+            document.getElementById('pattern-status').textContent = isPaused 
+                ? `Paused: ${currentPatternIndex + 1}/${currentPattern.length}`
+                : `Running: ${currentPatternIndex + 1}/${currentPattern.length}`;
+                
+            addLogEntry(isPaused ? 'Pattern paused' : 'Pattern resumed', 'info');
+        }
+        
+        // Stop flight pattern
+        function stopFlightPattern() {
+            if (currentPatternInterval) {
+                clearInterval(currentPatternInterval);
+                currentPatternInterval = null;
+            }
+            
+            isPaused = false;
+            currentPatternIndex = 0;
+            
+            // Update UI
+            document.getElementById('pattern-status').textContent = 'Ready';
+            document.getElementById('pause-pattern-btn').disabled = true;
+            document.getElementById('stop-pattern-btn').disabled = true;
+            document.getElementById('start-pattern-btn').disabled = false;
+            document.getElementById('pattern-select').disabled = false;
+            document.getElementById('pause-pattern-btn').textContent = 'Pause';
+            
+            addLogEntry('Pattern stopped', 'warning');
+        }
+        
+        // Add log entry
+        function addLogEntry(message, type = 'info') {
+            const logContainer = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${type}">${message}</span>`;
+            
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
         }
         
         // Update the position display
         function updatePositionDisplay(position) {
-            document.getElementById('latitude').textContent = position.latitude.toFixed(6) + '°';
-            document.getElementById('longitude').textContent = position.longitude.toFixed(6) + '°';
-            document.getElementById('altitude').textContent = position.altitude.toFixed(1) + ' m';
+            if (!position) return;
             
-            // Update map marker if map is initialized
+            document.getElementById('latitude').textContent = position.latitude.toFixed(4);
+            document.getElementById('longitude').textContent = position.longitude.toFixed(4);
+            document.getElementById('altitude').textContent = position.altitude.toFixed(0) + ' m';
+            
+            // Update map if available
             if (map && marker) {
-                marker.setPosition({lat: position.latitude, lng: position.longitude});
-                map.setCenter({lat: position.latitude, lng: position.longitude});
+                const pos = {lat: position.latitude, lng: position.longitude};
+                marker.setPosition(pos);
+                map.setCenter(pos);
+                
+                // Add to flight path
+                flightCoordinates.push(pos);
+                if (flightPath) {
+                    flightPath.setPath(flightCoordinates);
+                }
             }
         }
         
         // Update the flight data display
         function updateFlightDataDisplay(data) {
-            if (data.speed) {
-                document.getElementById('airspeed').textContent = data.speed.kias.toFixed(1) + ' kts';
-                document.getElementById('vertical-speed').textContent = data.speed.verticalSpeed.toFixed(0) + ' fpm';
-            }
+            if (!data) return;
             
-            if (data.attitude) {
-                document.getElementById('heading').textContent = data.attitude.heading.toFixed(1) + '°';
-                document.getElementById('pitch').textContent = data.attitude.pitch.toFixed(1) + '°';
-                document.getElementById('roll').textContent = data.attitude.roll.toFixed(1) + '°';
-                
-                // Update heading slider without triggering events
-                const headingSlider = document.getElementById('heading-slider');
-                headingSlider.value = data.attitude.heading;
-                document.getElementById('heading-value').textContent = data.attitude.heading.toFixed(0) + '°';
-                currentHeading = data.attitude.heading;
-            }
-            
+            // Update position
             if (data.position) {
                 updatePositionDisplay(data.position);
             }
             
-            if (data.controls) {
-                // Update throttle slider without triggering events
-                const throttleSlider = document.getElementById('throttle-slider');
-                throttleSlider.value = data.controls.throttle * 100;
-                document.getElementById('throttle-value').textContent = (data.controls.throttle * 100).toFixed(0) + '%';
-                currentThrottle = data.controls.throttle;
+            // Update attitude
+            if (data.attitude) {
+                document.getElementById('heading').textContent = data.attitude.heading.toFixed(0) + '°';
+            }
+            
+            // Update speed
+            if (data.speed) {
+                document.getElementById('airspeed').textContent = data.speed.kias.toFixed(0) + ' kts';
+                document.getElementById('vertical-speed').textContent = data.speed.verticalSpeed.toFixed(0) + ' fpm';
             }
         }
         
         // Initialize Google Maps
         function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
-                center: {lat: 37.6213, lng: -122.3790},
                 zoom: 12,
-                mapTypeId: 'satellite'
+                center: {lat: 37.6213, lng: -122.3790}, // Default to SFO
+                mapTypeId: 'terrain'
             });
             
             marker = new google.maps.Marker({
                 position: {lat: 37.6213, lng: -122.3790},
                 map: map,
-                title: 'Aircraft Position',
-                icon: {
-                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                    scale: 6,
-                    rotation: currentHeading
-                }
+                title: 'Aircraft'
+            });
+            
+            flightPath = new google.maps.Polyline({
+                path: flightCoordinates,
+                geodesic: true,
+                strokeColor: '#FF0000',
+                strokeOpacity: 1.0,
+                strokeWeight: 2,
+                map: map
             });
         }
+        
+        // Flight patterns data
+        const flightPatterns = {
+            takeoff: [
+                {
+                    position: { latitude: 49.6233, longitude: 6.2044, altitude: 376 },
+                    attitude: { heading: 270, pitch: 0, roll: 0 },
+                    speed: { kias: 0, groundSpeed: 0, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6233, longitude: 6.2044, altitude: 376 },
+                    attitude: { heading: 270, pitch: 0, roll: 0 },
+                    speed: { kias: 20, groundSpeed: 20, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6232, longitude: 6.203, altitude: 376 },
+                    attitude: { heading: 270, pitch: 0, roll: 0 },
+                    speed: { kias: 40, groundSpeed: 40, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6232, longitude: 6.201, altitude: 376 },
+                    attitude: { heading: 270, pitch: 0, roll: 0 },
+                    speed: { kias: 60, groundSpeed: 60, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6231, longitude: 6.199, altitude: 376 },
+                    attitude: { heading: 270, pitch: 0, roll: 0 },
+                    speed: { kias: 80, groundSpeed: 80, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.623, longitude: 6.197, altitude: 376 },
+                    attitude: { heading: 270, pitch: 0, roll: 0 },
+                    speed: { kias: 100, groundSpeed: 100, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6229, longitude: 6.195, altitude: 376 },
+                    attitude: { heading: 270, pitch: 0, roll: 0 },
+                    speed: { kias: 120, groundSpeed: 120, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6228, longitude: 6.193, altitude: 377 },
+                    attitude: { heading: 270, pitch: 1, roll: 0 },
+                    speed: { kias: 140, groundSpeed: 140, verticalSpeed: 100 }
+                },
+                {
+                    position: { latitude: 49.6227, longitude: 6.191, altitude: 380 },
+                    attitude: { heading: 270, pitch: 5, roll: 0 },
+                    speed: { kias: 160, groundSpeed: 160, verticalSpeed: 500 }
+                },
+                {
+                    position: { latitude: 49.6226, longitude: 6.189, altitude: 390 },
+                    attitude: { heading: 270, pitch: 10, roll: 0 },
+                    speed: { kias: 180, groundSpeed: 180, verticalSpeed: 1000 }
+                }
+            ],
+            rightTurn: [
+                {
+                    position: { latitude: 49.6226, longitude: 6.189, altitude: 500 },
+                    attitude: { heading: 270, pitch: 2, roll: 0 },
+                    speed: { kias: 180, groundSpeed: 180, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6226, longitude: 6.187, altitude: 500 },
+                    attitude: { heading: 290, pitch: 2, roll: 15 },
+                    speed: { kias: 180, groundSpeed: 180, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6228, longitude: 6.185, altitude: 500 },
+                    attitude: { heading: 310, pitch: 2, roll: 20 },
+                    speed: { kias: 180, groundSpeed: 180, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6230, longitude: 6.184, altitude: 500 },
+                    attitude: { heading: 330, pitch: 2, roll: 20 },
+                    speed: { kias: 180, groundSpeed: 180, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6232, longitude: 6.185, altitude: 500 },
+                    attitude: { heading: 350, pitch: 2, roll: 15 },
+                    speed: { kias: 180, groundSpeed: 180, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6234, longitude: 6.187, altitude: 500 },
+                    attitude: { heading: 10, pitch: 2, roll: 5 },
+                    speed: { kias: 180, groundSpeed: 180, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6236, longitude: 6.189, altitude: 500 },
+                    attitude: { heading: 30, pitch: 2, roll: 0 },
+                    speed: { kias: 180, groundSpeed: 180, verticalSpeed: 0 }
+                }
+            ],
+            descent: [
+                {
+                    position: { latitude: 49.6236, longitude: 6.189, altitude: 500 },
+                    attitude: { heading: 30, pitch: 2, roll: 0 },
+                    speed: { kias: 180, groundSpeed: 180, verticalSpeed: 0 }
+                },
+                {
+                    position: { latitude: 49.6238, longitude: 6.191, altitude: 490 },
+                    attitude: { heading: 30, pitch: -2, roll: 0 },
+                    speed: { kias: 180, groundSpeed: 180, verticalSpeed: -500 }
+                },
+                {
+                    position: { latitude: 49.6240, longitude: 6.193, altitude: 470 },
+                    attitude: { heading: 30, pitch: -3, roll: 0 },
+                    speed: { kias: 180, groundSpeed: 180, verticalSpeed: -800 }
+                },
+                {
+                    position: { latitude: 49.6242, longitude: 6.195, altitude: 450 },
+                    attitude: { heading: 30, pitch: -3, roll: 0 },
+                    speed: { kias: 180, groundSpeed: 180, verticalSpeed: -800 }
+                },
+                {
+                    position: { latitude: 49.6244, longitude: 6.197, altitude: 430 },
+                    attitude: { heading: 30, pitch: -2, roll: 0 },
+                    speed: { kias: 170, groundSpeed: 170, verticalSpeed: -500 }
+                },
+                {
+                    position: { latitude: 49.6246, longitude: 6.199, altitude: 420 },
+                    attitude: { heading: 30, pitch: -1, roll: 0 },
+                    speed: { kias: 160, groundSpeed: 160, verticalSpeed: -300 }
+                },
+                {
+                    position: { latitude: 49.6248, longitude: 6.201, altitude: 410 },
+                    attitude: { heading: 30, pitch: 0, roll: 0 },
+                    speed: { kias: 150, groundSpeed: 150, verticalSpeed: 0 }
+                }
+            ]
+        };
         
         // Set up event listeners
         document.addEventListener('DOMContentLoaded', function() {
             // Connect to WebSocket
             connectWebSocket();
             
-            // Throttle slider
-            const throttleSlider = document.getElementById('throttle-slider');
-            throttleSlider.addEventListener('input', function() {
-                const value = this.value / 100;
-                document.getElementById('throttle-value').textContent = this.value + '%';
-                sendCommand('setThrottle', {value: value});
+            // Set up tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs and tab contents
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    this.classList.add('active');
+                    document.getElementById(this.dataset.tab).classList.add('active');
+                });
             });
             
-            // Heading slider
-            const headingSlider = document.getElementById('heading-slider');
-            headingSlider.addEventListener('input', function() {
-                const value = parseInt(this.value);
-                document.getElementById('heading-value').textContent = value + '°';
+            // Basic control buttons
+            document.getElementById('get-data-btn').addEventListener('click', getFlightData);
+            
+            document.getElementById('set-throttle-btn').addEventListener('click', function() {
+                sendCommand('setThrottle', { value: 0.5 });
             });
             
-            headingSlider.addEventListener('change', function() {
-                const value = parseInt(this.value);
-                sendCommand('setHeading', {degrees: value});
+            document.getElementById('set-heading-btn').addEventListener('click', function() {
+                sendCommand('setHeading', { degrees: 270 });
             });
             
-            // Aircraft selection
-            document.getElementById('select-aircraft-btn').addEventListener('click', function() {
-                const aircraftId = parseInt(document.getElementById('aircraft-select').value);
-                sendCommand('selectAircraft', {aircraftId: aircraftId});
+            document.getElementById('select-b787-btn').addEventListener('click', function() {
+                sendCommand('selectAircraft', { aircraftId: 18 });
             });
             
-            // Take off button
-            document.getElementById('takeoff-btn').addEventListener('click', function() {
-                sendCommand('takeOff');
+            // Flight pattern buttons
+            document.getElementById('start-pattern-btn').addEventListener('click', function() {
+                const patternSelect = document.getElementById('pattern-select');
+                startFlightPattern(patternSelect.value);
             });
             
-            // Land button
-            document.getElementById('land-btn').addEventListener('click', function() {
-                sendCommand('land');
+            document.getElementById('pause-pattern-btn').addEventListener('click', togglePauseFlightPattern);
+            
+            document.getElementById('stop-pattern-btn').addEventListener('click', stopFlightPattern);
+            
+            // Clear logs button
+            document.getElementById('clear-logs-btn').addEventListener('click', function() {
+                document.getElementById('log-container').innerHTML = '';
+                addLogEntry('Logs cleared', 'info');
             });
             
-            // Turn left button
-            document.getElementById('turn-left-btn').addEventListener('click', function() {
-                const newHeading = (currentHeading - 45 + 360) % 360;
-                sendCommand('setHeading', {degrees: newHeading});
-            });
-            
-            // Turn right button
-            document.getElementById('turn-right-btn').addEventListener('click', function() {
-                const newHeading = (currentHeading + 45) % 360;
-                sendCommand('setHeading', {degrees: newHeading});
-            });
+            // Add initial log entry
+            addLogEntry('Dashboard initialized', 'info');
         });
     </script>
     
-    <!-- Google Maps API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap" async defer></script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap">
+    </script>
 </body>
 </html>

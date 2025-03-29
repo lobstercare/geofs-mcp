@@ -7,7 +7,7 @@ import { setupMCPRoutes } from './routes/mcp-routes';
 
 // Create Express app
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3002;
 
 // Create HTTP server
 const server = new Server(app);
@@ -21,6 +21,13 @@ const geofsController = new GeoFSController();
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Add CORS headers to allow requests from GeoFS
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
 
 // Setup MCP routes
 setupMCPRoutes(app, geofsController);
